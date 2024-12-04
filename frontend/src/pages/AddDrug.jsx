@@ -1,18 +1,69 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useReducer } from "react";
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import SearchDrug from "./SearchDrug.jsx";
 import { useAuthContext } from "../authContext.js";
-import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
 const currentURL = window.location.pathname;
 console.log(window.location.pathname);
 
+// Reducer
+const formReducer = (state, action) => {
+  switch (action.type) {
+    case "inputText":
+      return { ...state, [action.field]: action.payload };
+    case "drugNameSelected":
+      return { ...state, [action.field]: action.payload };
+  }
+};
+
+const initialFormState = {
+  drugName: "",
+  nickname: "",
+  companyName: "",
+  typeOfDrug: "over-the-counter",
+  formOfDrug: "pill",
+  amount: "",
+  unit: "pill",
+  strength: "",
+  strengthUnit: "mg",
+  takein: {
+    startDate: "",
+    endDate: "",
+    frequencyDay: "",
+    frequencyWithinADay: "",
+    doze_1: "",
+    doze_2: "",
+    doze_3: "",
+  },
+  remaining: "",
+  shortageLimit: "",
+};
+
 function CreateDrug({ setIsAddMedicationOpen }) {
   const userIdObj = useAuthContext();
   const [userId, setUserId] = useState(userIdObj.userId);
+
+  // Reducer
+  const [formState, dispatch] = useReducer(formReducer, initialFormState);
+
+  const handleTextChange = (e) => {
+    dispatch({
+      type: "inputText",
+      field: e.target.name,
+      payload: e.target.value,
+    });
+  };
+
+  const handleListClick = (field, payload) => {
+    dispatch({
+      type: "drugNameSelected",
+      field,
+      payload,
+    });
+  };
 
   // Steps controll
   // Name
@@ -28,32 +79,6 @@ function CreateDrug({ setIsAddMedicationOpen }) {
   // Reminder
   const [reminderRegistration, setReminderRefistration] = useState(false);
   const [progressReminder, setProgressReminder] = useState(1);
-
-  // State per each input values
-  // Name
-  const [drugName, setDrugName] = useState("");
-  const [nickname, setNickname] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  // Info
-  const [formOfDrug, setFormOfDrug] = useState("pill");
-  const [typeOfDrug, setTypeOfDrug] = useState("over-the-counter");
-  const [amount, setAmount] = useState("");
-  const [unit, setUnit] = useState("pill");
-  const [strength, setStrength] = useState("");
-  const [strengthUnit, setStrengthUnit] = useState("mg");
-  // Schedule
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [frequencyDay, setFrequencyDay] = useState("");
-  const [frequencyWithinADay, setFrequencyWithinADay] = useState("");
-  const [doze_1, setDoze_1] = useState("");
-  const [doze_2, setDoze_2] = useState("");
-  const [doze_3, setDoze_3] = useState("");
-  // Reminder
-  const [remaining, setRemaining] = useState("");
-  const [shortageLimit, setShortageLimit] = useState("");
-  const [description, setDescription] = useState("");
-  const [status, setStatus] = useState("taking");
 
   // For seaching
   const [searchedDrugs, setSearchedDrugs] = useState([]);
@@ -85,45 +110,44 @@ function CreateDrug({ setIsAddMedicationOpen }) {
 
   // Searching__detecting the change in state value 'drugName'
   useEffect(() => {
-    if (drugName.length > 2) {
+    if (formState.drugName.length > 2) {
       setSearchedDrugs(
         drugsBigData.filter((obj) =>
           Object.values(obj)
             .toString()
             .toLowerCase()
-            .includes(drugName.toLowerCase())
+            .includes(formState.drugName.toLowerCase())
         )
       );
     }
-  }, [drugName]);
+  }, [formState.drugName]);
 
   // Save the data (=register)
   const handleSaveDrug = () => {
     const data = {
       userId,
-      drugName,
-      nickname,
-      companyName,
-      formOfDrug,
-      typeOfDrug,
+      drugName: formState.drugName,
+      nickname: formState.nickname,
+      companyName: formState.companyName,
+      formOfDrug: formState.formOfDrug,
+      typeOfDrug: formState.typeOfDrug,
       takein: {
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        frequencyDay: Number(frequencyDay),
-        frequencyWithinADay: Number(frequencyWithinADay),
-        doze_1,
-        doze_2,
-        doze_3,
+        startDate: new Date(formState.startDate),
+        endDate: new Date(formState.endDate),
+        frequencyDay: Number(formState.frequencyDay),
+        frequencyWithinADay: Number(formState.frequencyWithinADay),
+        doze_1: formState?.doze_1,
+        doze_2: formState?.doze_2,
+        doze_3: formState?.doze_3,
       },
       latestTakenDate: null,
-      amount,
-      unit,
-      strength,
-      strengthUnit,
-      remaining,
-      shortageLimit,
-      // description,
-      status,
+      amount: formState.amount,
+      unit: formState.unit,
+      strength: formState.strength,
+      strengthUnit: formState.strengthUnit,
+      remaining: formState.remaining,
+      shortageLimit: formState.remaining,
+      status: "taking",
     };
     // Create Drug data
     axios
@@ -135,39 +159,41 @@ function CreateDrug({ setIsAddMedicationOpen }) {
       .then((id) => {
         // Then, create Log data
         // set doze hours
-        const doze1Time = +doze_1.split(":")[0];
-        const doze1Minute = +doze_1.split(":")[1];
-        const doze1DateH = new Date(startDate).setHours(
-          new Date(startDate).getHours() + doze1Time
+        const doze1Time = +formState.doze_1.split(":")[0];
+        const doze1Minute = +formState.doze_1.split(":")[1];
+        const doze1DateH = new Date(formState.startDate).setHours(
+          new Date(formState.startDate).getHours() + doze1Time
         );
         const doze1DateM = new Date(doze1DateH).setMinutes(doze1Minute);
 
-        const doze2Time = +doze_2.split(":")[0];
-        const doze2Minute = +doze_2.split(":")[1];
+        const doze2Time = +formState.doze_2?.split(":")[0];
+        const doze2Minute = +formState.doze_2?.split(":")[1];
         const doze2Date =
           doze1DateM +
           (doze2Time - doze1Time) * 1000 * 60 * 60 +
           (doze2Minute - doze1Minute) * 1000 * 60;
-        const doze3Time = +doze_3.split(":")[0];
-        const doze3Minute = +doze_3.split(":")[1];
+        const doze3Time = +formState.doze_3?.split(":")[0];
+        const doze3Minute = +formState.doze_3?.split(":")[1];
         const doze3Date =
           doze2Date +
           (doze3Time - doze2Time) * 1000 * 60 * 60 +
           (doze3Minute - doze2Minute) * 1000 * 60;
 
-        const days = (new Date(endDate) - new Date(startDate)) / 86400000;
+        const days =
+          (new Date(formState.endDate) - new Date(formState.startDate)) /
+          86400000;
         console.log(days, new Date(doze1DateM));
         // If frequencyWithinADay<=1
         logArr = [];
-        if (+frequencyWithinADay <= 1) {
-          for (let i = 0; i < days; i = i + Number(frequencyDay)) {
+        if (+formState.frequencyWithinADay <= 1) {
+          for (let i = 0; i < days; i = i + Number(formState.frequencyDay)) {
             const doze1DateFor = new Date(doze1DateM).setDate(
               new Date(doze1DateM).getDate() + i
             );
             logArr.push(doze1DateFor);
           }
           console.log(logArr);
-        } else if (frequencyWithinADay === 2) {
+        } else if (formState.frequencyWithinADay === 2) {
           // If frequencyWithinADay=2
           for (let i = 0; i <= days; i++) {
             const doze1DateFor = new Date(doze1DateM).setDate(
@@ -178,6 +204,7 @@ function CreateDrug({ setIsAddMedicationOpen }) {
             );
             logArr.push(doze1DateFor, doze2DateFor);
           }
+          console.log(logArr);
         } else {
           // If frequencyWithinADay=3
           for (let i = 0; i <= days; i++) {
@@ -233,12 +260,9 @@ function CreateDrug({ setIsAddMedicationOpen }) {
     <div className="mb-5">
       {nameRegistration ? (
         <NameRegister
-          drugName={drugName}
-          setDrugName={setDrugName}
-          nickname={nickname}
-          setNickname={setNickname}
-          companyName={companyName}
-          setCompanyName={setCompanyName}
+          formState={formState}
+          handleTextChange={handleTextChange}
+          handleListClick={handleListClick}
           searchedDrugs={searchedDrugs}
           setSearchedDrugs={setSearchedDrugs}
           searchedDrugId={searchedDrugId}
@@ -259,15 +283,9 @@ function CreateDrug({ setIsAddMedicationOpen }) {
       )}
       {drugInfoRegistration ? (
         <DrugInfoRegister
-          nickname={nickname}
-          typeOfDrug={typeOfDrug}
-          setTypeOfDrug={setTypeOfDrug}
-          formOfDrug={formOfDrug}
-          setFormOfDrug={setFormOfDrug}
-          setAmount={setAmount}
-          setUnit={setUnit}
-          setStrength={setStrength}
-          setStrengthUnit={setStrengthUnit}
+          formState={formState}
+          handleTextChange={handleTextChange}
+          handleListClick={handleListClick}
           setDrugInfoRegistration={setDrugInfoRegistration}
           setScheduleRegistration={setScheduleRegistration}
           setNameRegistration={setNameRegistration}
@@ -281,20 +299,9 @@ function CreateDrug({ setIsAddMedicationOpen }) {
       )}
       {scheduleRegistration ? (
         <ScheduleRegister
-          startDate={startDate}
-          setStartDate={setStartDate}
-          endDate={endDate}
-          setEndDate={setEndDate}
-          frequencyDay={frequencyDay}
-          setFrequencyDay={setFrequencyDay}
-          frequencyWithinADay={frequencyWithinADay}
-          setFrequencyWithinADay={setFrequencyWithinADay}
-          doze_1={doze_1}
-          setDoze_1={setDoze_1}
-          doze_2={doze_2}
-          setDoze_2={setDoze_2}
-          doze_3={doze_3}
-          setDoze_3={setDoze_3}
+          formState={formState}
+          handleTextChange={handleTextChange}
+          handleListClick={handleListClick}
           setDrugInfoRegistration={setDrugInfoRegistration}
           setProgressDrugInfo={setProgressDrugInfo}
           setScheduleRegistration={setScheduleRegistration}
@@ -308,12 +315,9 @@ function CreateDrug({ setIsAddMedicationOpen }) {
 
       {reminderRegistration ? (
         <ReminderRegister
+          formState={formState}
+          handleTextChange={handleTextChange}
           navigate={navigate}
-          setRemaining={setRemaining}
-          setShortageLimit={setShortageLimit}
-          unit={unit}
-          frequencyDay={frequencyDay}
-          frequencyWithinADay={frequencyWithinADay}
           handleSaveDrug={handleSaveDrug}
           setIsAddMedicationOpen={setIsAddMedicationOpen}
           setScheduleRegistration={setScheduleRegistration}
@@ -342,19 +346,12 @@ function Header({ children }) {
 }
 
 function NameRegister({
-  drugName,
-  setDrugName,
-  nickname,
-  setNickname,
-  companyName,
-  setCompanyName,
+  formState,
+  handleTextChange,
+  handleListClick,
   searchedDrugs,
-  setSearchedDrugs,
   searchedDrugId,
   setSearchedDrugId,
-  drugsBigData,
-  setDrugsBigData,
-  nameRegistration,
   setNameRegistration,
   setDrugInfoRegistration,
   setIsAddMedicationOpen,
@@ -363,12 +360,10 @@ function NameRegister({
   isNicknameOpen,
   setIsNicknameOpen,
 }) {
-  // const [isNameOpen, setIsNameOpen] = useState(true);
-  // const [isNicknameOpen, setIsNicknameOpen] = useState(false);
   const [isNameSearchOpen, setIsNameSearchOpen] = useState(false);
 
   const handleClickNext = () => {
-    if (drugName.length > 0) {
+    if (formState.drugName.length > 0) {
       // If data is from db
       if (searchedDrugId) {
         setIsNameOpen(false);
@@ -397,7 +392,6 @@ function NameRegister({
     setIsNicknameOpen(false);
     setNameRegistration(false);
     setDrugInfoRegistration(true);
-    console.log(nickname);
   };
 
   return (
@@ -426,29 +420,29 @@ function NameRegister({
                 className="text-gray-500 border-2 border-gray-400	rounded-md	w-full h-14 pl-3 mt-1.5 focus:outline-none focus:border-primary-700 z-0"
                 type="text"
                 placeholder="e.g Strawnana"
-                value={drugName}
+                name="drugName"
+                value={formState.drugName}
                 onChange={(e) => {
-                  setDrugName(e.target.value);
+                  handleTextChange(e);
                   setIsNameSearchOpen(true);
                 }}
               />
             </div>
             <div className="search-result">
-              {drugName.length > 2 && isNameSearchOpen ? (
+              {formState.drugName.length > 2 && isNameSearchOpen ? (
                 <ul className="border-2 border-primary-700 overflow-auto max-h-[375px] mt-[-5px] z-10">
                   <li
                     className="text-base text-gray-700 pl-3 py-[15px] hover:text-white hover:bg-primary-700"
                     onClick={() => setIsNameSearchOpen(false)}
                   >
-                    {drugName}
+                    {formState.drugName}
                   </li>
                   {searchedDrugs.map((drug) => {
                     return (
                       <SearchDrug
+                        handleListClick={handleListClick}
                         key={drug.drug_code}
                         drug={drug}
-                        setDrugName={setDrugName}
-                        setCompanyName={setCompanyName}
                         setSearchedDrugId={setSearchedDrugId}
                         searchedDrugId={searchedDrugId}
                         isNameSearchOpen={isNameSearchOpen}
@@ -463,7 +457,9 @@ function NameRegister({
             </div>
             <button
               className={`mt-10 text-base text-gray-50 font-semibold	 rounded-3xl w-full h-12 ${
-                drugName.length === 0 ? "bg-primary-200" : "bg-primary-700"
+                formState.drugName.length === 0
+                  ? "bg-primary-200"
+                  : "bg-primary-700"
               }
         }`}
               onClick={handleClickNext}
@@ -495,9 +491,13 @@ function NameRegister({
                 className="text-gray-500 border-2 border-gray-400	rounded-md	w-full h-14 pl-3 mt-1.5 focus:outline-none focus:border-primary-700 z-0"
                 type="text"
                 placeholder="e.g Strawnana"
-                value={nickname ? nickname : drugName}
+                name="nickname"
+                value={
+                  formState.nickname ? formState.nickname : formState.drugName
+                }
                 onChange={(e) => {
-                  setNickname(e.target.value);
+                  handleTextChange(e);
+                  console.log(e.target.value);
                 }}
               />
             </div>
@@ -519,15 +519,9 @@ function NameRegister({
 }
 
 function DrugInfoRegister({
-  nickname,
-  typeOfDrug,
-  setTypeOfDrug,
-  formOfDrug,
-  setFormOfDrug,
-  setAmount,
-  setUnit,
-  setStrength,
-  setStrengthUnit,
+  formState,
+  handleTextChange,
+  handleListClick,
   setDrugInfoRegistration,
   setScheduleRegistration,
   setNameRegistration,
@@ -543,13 +537,13 @@ function DrugInfoRegister({
   const handlePrevious = () => {
     // type of med
     if (progressDrugInfo === 1) {
-      if (nickname) {
+      if (formState.nickname) {
         setDrugInfoRegistration(false);
         setNameRegistration(true);
         setIsNicknameOpen(true);
         setIsNameOpen(false);
       }
-      if (!nickname) {
+      if (!formState.nickname) {
         setDrugInfoRegistration(false);
         setNameRegistration(true);
         setIsNameOpen(true);
@@ -592,7 +586,10 @@ function DrugInfoRegister({
                     name="type"
                     id="prescription"
                     className="sr-only	peer"
-                    onClick={(e) => setTypeOfDrug(e.target.value)}
+                    // onClick={(e) => setTypeOfDrug(e.target.value)}
+                    onClick={(e) =>
+                      handleListClick("typeOfDrug", e.target.value)
+                    }
                   />
                   <label
                     htmlFor="prescription"
@@ -608,7 +605,10 @@ function DrugInfoRegister({
                     name="type"
                     id="over-the-counter"
                     className="sr-only	peer"
-                    onClick={(e) => setTypeOfDrug(e.target.value)}
+                    // onClick={(e) => setTypeOfDrug(e.target.value)}
+                    onClick={(e) =>
+                      handleListClick("typeOfDrug", e.target.value)
+                    }
                   />
                   <label
                     htmlFor="over-the-counter"
@@ -624,7 +624,10 @@ function DrugInfoRegister({
                     name="type"
                     id="suppliment"
                     className="sr-only	peer"
-                    onClick={(e) => setTypeOfDrug(e.target.value)}
+                    // onClick={(e) => setTypeOfDrug(e.target.value)}
+                    onClick={(e) =>
+                      handleListClick("typeOfDrug", e.target.value)
+                    }
                   />
                   <label
                     htmlFor="suppliment"
@@ -666,7 +669,9 @@ function DrugInfoRegister({
                     name="form"
                     id="pill"
                     className="sr-only	peer"
-                    onClick={(e) => setFormOfDrug(e.target.value)}
+                    onClick={(e) =>
+                      handleListClick("formOfDrug", e.target.value)
+                    }
                   />
                   <label
                     htmlFor="pill"
@@ -682,7 +687,9 @@ function DrugInfoRegister({
                     name="form"
                     id="injection"
                     className="sr-only	peer"
-                    onClick={(e) => setFormOfDrug(e.target.value)}
+                    onClick={(e) =>
+                      handleListClick("formOfDrug", e.target.value)
+                    }
                   />
                   <label
                     htmlFor="injection"
@@ -698,7 +705,9 @@ function DrugInfoRegister({
                     name="form"
                     id="liquid"
                     className="sr-only	peer"
-                    onClick={(e) => setFormOfDrug(e.target.value)}
+                    onClick={(e) =>
+                      handleListClick("formOfDrug", e.target.value)
+                    }
                   />
                   <label
                     htmlFor="liquid"
@@ -714,7 +723,9 @@ function DrugInfoRegister({
                     name="form"
                     id="drop"
                     className="sr-only	peer"
-                    onClick={(e) => setFormOfDrug(e.target.value)}
+                    onClick={(e) =>
+                      handleListClick("formOfDrug", e.target.value)
+                    }
                   />
                   <label
                     htmlFor="drop"
@@ -730,7 +741,9 @@ function DrugInfoRegister({
                     name="form"
                     id="inhaler"
                     className="sr-only	peer"
-                    onClick={(e) => setFormOfDrug(e.target.value)}
+                    onClick={(e) =>
+                      handleListClick("formOfDrug", e.target.value)
+                    }
                   />
                   <label
                     htmlFor="inhaler"
@@ -746,7 +759,9 @@ function DrugInfoRegister({
                     name="form"
                     id="powder"
                     className="sr-only	peer"
-                    onClick={(e) => setFormOfDrug(e.target.value)}
+                    onClick={(e) =>
+                      handleListClick("formOfDrug", e.target.value)
+                    }
                   />
                   <label
                     htmlFor="powder"
@@ -762,7 +777,9 @@ function DrugInfoRegister({
                     name="form"
                     id="other"
                     className="sr-only	peer"
-                    onClick={(e) => setTypeOfDrug(e.target.value)}
+                    onClick={(e) =>
+                      handleListClick("formOfDrug", e.target.value)
+                    }
                   />
                   <label
                     htmlFor="other"
@@ -804,8 +821,9 @@ function DrugInfoRegister({
                     </label>
                     <input
                       type="text"
+                      name="amount"
                       className="border-2 border-gray-400	rounded-md	w-full h-14 pl-3 mt-2	flex items-center	cursor-pointer"
-                      onChange={(e) => setAmount(e.target.value)}
+                      onChange={(e) => handleTextChange(e)}
                     />
                   </div>
                   <div className="fw-full">
@@ -814,7 +832,7 @@ function DrugInfoRegister({
                     </label>
                     <select
                       className="border-2 border-gray-400	rounded-md	w-full h-14 pl-3 mt-2	 items-center	cursor-pointer"
-                      onSelect={(e) => setUnit(e.target.value)}
+                      onSelect={(e) => handleListClick("unit", e.target.value)}
                     >
                       <option value="pill">pill</option>
                       <option value="piece">piece</option>
@@ -859,8 +877,9 @@ function DrugInfoRegister({
                     </label>
                     <input
                       type="text"
+                      name="strength"
                       className="border-2 border-gray-400	rounded-md	w-full h-14 pl-3 mt-2	flex items-center	cursor-pointer"
-                      onChange={(e) => setStrength(e.target.value)}
+                      onChange={(e) => handleTextChange(e)}
                     />
                   </div>
                   <div className="fw-full">
@@ -869,10 +888,12 @@ function DrugInfoRegister({
                     </label>
                     <select
                       className="border-2 border-gray-400	rounded-md	w-full h-14 pl-3 mt-2	 items-center	cursor-pointer"
-                      onSelect={(e) => setStrengthUnit(e.target.value)}
+                      onSelect={(e) =>
+                        handleListClick("strengthUnit", e.target.value)
+                      }
                     >
-                      <option value="ml">ml</option>
                       <option value="mg">mg</option>
+                      <option value="ml">ml</option>
                     </select>
                   </div>
                 </div>
@@ -896,20 +917,9 @@ function DrugInfoRegister({
 }
 
 function ScheduleRegister({
-  startDate,
-  setStartDate,
-  endDate,
-  setEndDate,
-  frequencyDay,
-  setFrequencyDay,
-  frequencyWithinADay,
-  setFrequencyWithinADay,
-  doze_1,
-  setDoze_1,
-  doze_2,
-  setDoze_2,
-  doze_3,
-  setDoze_3,
+  formState,
+  handleTextChange,
+  handleListClick,
   setDrugInfoRegistration,
   setProgressDrugInfo,
   setScheduleRegistration,
@@ -924,20 +934,20 @@ function ScheduleRegister({
 
   const handleClickFrequency = (e) => {
     if (e === 1) {
-      setFrequencyDay(1);
-      setFrequencyWithinADay(1);
+      handleListClick("frequencyDay", 1);
+      handleListClick("frequencyWithinADay", 1);
     }
     if (e === 2) {
-      setFrequencyDay(1);
-      setFrequencyWithinADay(2);
+      handleListClick("frequencyDay", 2);
+      handleListClick("frequencyWithinADay", 2);
     }
     if (e === 3) {
-      setFrequencyDay(1);
-      setFrequencyWithinADay(3);
+      handleListClick("frequencyDay", 1);
+      handleListClick("frequencyWithinADay", 3);
     }
     if (e === 4) {
-      setFrequencyDay(2);
-      setFrequencyWithinADay(1);
+      handleListClick("frequencyDay", 2);
+      handleListClick("frequencyWithinADay", 1);
     }
   };
 
@@ -965,15 +975,15 @@ function ScheduleRegister({
       }
     }
     if (progressSch === 3) {
-      if (frequencyWithinADay === 1) {
+      if (formState.frequencyWithinADay === 1) {
         setProgressSch((progressSch) => progressSch - 1);
         setDoze1open(true);
       }
-      if (frequencyWithinADay === 2) {
+      if (formState.frequencyWithinADay === 2) {
         setProgressSch((progressSch) => progressSch - 1);
         setDoze2open(true);
       }
-      if (frequencyWithinADay === 3) {
+      if (formState.frequencyWithinADay === 3) {
         setProgressSch((progressSch) => progressSch - 1);
         setDoze3open(true);
       }
@@ -988,7 +998,7 @@ function ScheduleRegister({
 
   const handleClickDoze1 = () => {
     // Set-doze-1 will be here
-    if (frequencyWithinADay === 1) {
+    if (formState.frequencyWithinADay === 1) {
       setProgressSch((progressSch) => progressSch + 1);
     } else {
       setDoze1open(false);
@@ -998,7 +1008,7 @@ function ScheduleRegister({
 
   const handleClickDoze2 = () => {
     // Set-doze-2 will be here
-    if (frequencyWithinADay === 2) {
+    if (formState.frequencyWithinADay === 2) {
       setProgressSch((progressSch) => progressSch + 1);
     } else {
       setDoze2open(false);
@@ -1017,8 +1027,9 @@ function ScheduleRegister({
       setProgressSch((progressSch) => progressSch + 1);
     }
     if (!needEndDay) {
-      //If user answers 'no', set the day 3 yrs later
-      setEndDate("2027/12/31");
+      // //If user answers 'no', set the day 3 yrs later
+      handleListClick("endDate", "2024/6/30");
+
       // Unmount this component
       setScheduleRegistration(false);
       setReminderRefistration(true);
@@ -1150,9 +1161,10 @@ function ScheduleRegister({
               <div id="doze_1" className="form mx-4 mt-[58px]">
                 <input
                   type="text"
+                  name="doze_1"
                   className="border-2 border-gray-400 px-4 py-2 rounded-[10px]"
                   placeholder="e.g.13:00"
-                  onChange={(e) => setDoze_1(e.target.value)}
+                  onChange={(e) => handleTextChange(e)}
                 />
                 <div className="next_name mt-[224px]">
                   <button
@@ -1170,9 +1182,10 @@ function ScheduleRegister({
               <div id="doze_2" className="form mx-4 mt-[58px]">
                 <input
                   type="text"
+                  name="doze_2"
                   className="border-2 border-gray-400 px-4 py-2 rounded-[10px]"
                   placeholder="e.g.13:00"
-                  onChange={(e) => setDoze_2(e.target.value)}
+                  onChange={(e) => handleTextChange(e)}
                 />
                 <div className="next_name mt-[224px]">
                   <button
@@ -1190,9 +1203,10 @@ function ScheduleRegister({
               <div id="doze_3" className="form mx-4 mt-[58px]">
                 <input
                   type="text"
+                  name="doze_3"
                   className="border-2 border-gray-400 px-4 py-2 rounded-[10px]"
                   placeholder="e.g.13:00"
-                  onChange={(e) => setDoze_3(e.target.value)}
+                  onChange={(e) => handleTextChange(e)}
                 />
                 <div className="next_name mt-[224px]">
                   <button
@@ -1222,8 +1236,9 @@ function ScheduleRegister({
             <div className="form mx-4 mt-[58px]">
               <input
                 type="date"
+                name="startDate"
                 className="border-2 border-gray-400 px-4 py-2 rounded-[10px]"
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => handleTextChange(e)}
               />
               <div className="next_name mt-[224px]">
                 <button
@@ -1307,8 +1322,9 @@ function ScheduleRegister({
             <div className="form mx-4 mt-[58px]">
               <input
                 type="date"
+                name="endDate"
                 className="border-2 border-gray-400 px-4 py-2 rounded-[10px]"
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => handleTextChange(e)}
               />
               <div className="next_name mt-[224px]">
                 <button
@@ -1329,12 +1345,9 @@ function ScheduleRegister({
 }
 
 function ReminderRegister({
+  formState,
+  handleTextChange,
   navigate,
-  setRemaining,
-  setShortageLimit,
-  unit,
-  frequencyDay,
-  frequencyWithinADay,
   handleSaveDrug,
   setScheduleRegistration,
   setReminderRegistration,
@@ -1343,7 +1356,6 @@ function ReminderRegister({
   setIsAddMedicationOpen,
 }) {
   console.log(currentURL);
-  const [progress, setProgress] = useState(1);
   const [needReminder, setNeedReminder] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -1465,7 +1477,7 @@ function ReminderRegister({
         <div className="stock">
           <div className="text-wrapper mx-4 mt-10  text-primary-950">
             <h2 className="text-2xl font-bold">
-              How many {unit} do you have left?{" "}
+              How many {formState.unit} do you have left?{" "}
             </h2>
             <p className="text-base mt-3">
               How many medications do you have left in your stock?
@@ -1475,10 +1487,11 @@ function ReminderRegister({
             <div className="name mt-4 flex flex-col gap-2">
               <input
                 type="text"
+                name="remaining"
                 className="border-2 border-gray-400	rounded-md	w-[120px] h-14 pl-3 mt-2 self-center	"
-                onChange={(e) => setRemaining(e.target.value)}
+                onChange={(e) => handleTextChange(e)}
               />
-              <label className="self-center">{unit}</label>
+              <label className="self-center">{formState.unit}</label>
             </div>
             <div className="next_name mt-[388px]">
               <button
@@ -1504,11 +1517,11 @@ function ReminderRegister({
             </h2>
             <p className="text-base mt-3">
               You take this medications{" "}
-              {frequencyDay > 1
+              {formState.frequencyDay > 1
                 ? "every 2 days"
-                : frequencyWithinADay === 1
+                : formState.frequencyWithinADay === 1
                 ? "once a day"
-                : frequencyWithinADay === 2
+                : formState.frequencyWithinADay === 2
                 ? "twice a day"
                 : "3 times a day"}
               .
@@ -1518,10 +1531,11 @@ function ReminderRegister({
             <div className="name mt-4 flex flex-col gap-2">
               <input
                 type="text"
+                name="shortageLimit"
                 className="border-2 border-gray-400	rounded-md	w-[120px] h-14 pl-3 mt-2 self-center	"
-                onChange={(e) => setShortageLimit(e.target.value)}
+                onChange={(e) => handleTextChange(e)}
               />
-              <label className="self-center">{unit} left</label>
+              <label className="self-center">{formState.unit} left</label>
             </div>
             <div className="next_name mt-[388px]">
               <button
@@ -1583,152 +1597,5 @@ function ReminderRegister({
         )}
       </>
     </>
-  );
-}
-
-function Timeslider() {
-  var settings = {
-    infinite: true,
-    speed: 1000,
-    slidesToShow: 5,
-    slidesToScroll: 1,
-    swipeToSlide: true,
-    vertical: true,
-  };
-
-  var settingsampm = {
-    infinite: true,
-    speed: 1000,
-    slidesToShow: 2,
-    slidesToScroll: 1,
-    swipeToSlide: true,
-    vertical: true,
-  };
-
-  const hrs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-  const minutes = [
-    "00",
-    "01",
-    "02",
-    "03",
-    "04",
-    "05",
-    "06",
-    "07",
-    "08",
-    "09",
-    10,
-    11,
-    12,
-    13,
-    14,
-    15,
-    16,
-    17,
-    18,
-    19,
-    20,
-    21,
-    22,
-    23,
-    24,
-    25,
-    26,
-    27,
-    28,
-    29,
-    30,
-    31,
-    32,
-    33,
-    34,
-    35,
-    36,
-    37,
-    38,
-    39,
-    40,
-    41,
-    42,
-    43,
-    44,
-    45,
-    46,
-    47,
-    48,
-    49,
-    50,
-    51,
-    52,
-    53,
-    54,
-    55,
-    56,
-    57,
-    58,
-    59,
-  ];
-
-  return (
-    <div>
-      {/* <div className="grid grid-cols-[40px_40px_40px]">
-        <Slider {...settings}>
-          {hrs.map((hour) => {
-            return (
-              <div>
-                <h3>{hour}</h3>
-              </div>
-            );
-          })}
-        </Slider>
-        <Slider {...settings}>
-          {minutes.map((minute) => {
-            return (
-              <div className="bg-primary-700">
-                <h3>{minute}</h3>
-              </div>
-            );
-          })}
-        </Slider>
-        <Slider {...settingsampm}>
-          <div>
-            <h3>am</h3>
-          </div>
-          <div>
-            <h3>pm</h3>
-          </div>
-        </Slider>
-      </div> */}
-
-      {/* scroll picker using vanilla css */}
-      <div className="scroll">
-        <div className="scrollable-content hours">
-          {hrs.map((hour) => {
-            return (
-              <div className="el">
-                <h3>{hour}</h3>
-              </div>
-            );
-          })}
-        </div>
-        <div className="scrollable-content minutes">
-          {minutes.map((minute) => {
-            return (
-              <div className="el">
-                <h3>{minute}</h3>
-              </div>
-            );
-          })}
-        </div>
-        <div className="ampm">
-          <div className="el">
-            <h3>am</h3>
-          </div>
-          <div className="el">
-            <h3>pm</h3>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }

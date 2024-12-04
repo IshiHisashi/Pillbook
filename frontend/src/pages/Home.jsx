@@ -99,7 +99,7 @@ function Home() {
           setShortageDrugs(res.data.data.shortageDrugs);
         })
         .catch(setShortageDrugs(null));
-  }, [userId]);
+  }, [userId, logTaken]);
 
   // Read Log Data
   useEffect(() => {
@@ -366,8 +366,8 @@ function Log({
   const minutestaken = new Date(localDateTaken).toTimeString().split(":")[1];
   const ampmPlan = hoursPlan < 12 ? "am" : "pm";
   const ampmTaken = hoursTaken < 12 ? "am" : "pm";
-  const frequencyDay = log.drugId.takein.frequencyDay;
-  const frequencyWithinADay = log.drugId.takein.frequencyWithinADay;
+  const frequencyDay = log.drugId?.takein.frequencyDay;
+  const frequencyWithinADay = log.drugId?.takein.frequencyWithinADay;
 
   return (
     <>
@@ -390,11 +390,11 @@ function Log({
           )}
 
           <h4 className="text-[18.98px] text-gray-950 font-semibold">
-            {log.drugId.drugName}
+            {log.drugId?.drugName}
           </h4>
           {/* frequency */}
           <p className="text-[11px] text-gray-500 font-medium">
-            {log.drugId.amount} {log.drugId.unit} /{" "}
+            {log.drugId?.amount} {log.drugId?.unit} /{" "}
             {frequencyDay === 1
               ? "once"
               : frequencyDay === 2
@@ -676,7 +676,7 @@ function TakeLog({
 
   const UpdateRemining = () => {
     const newRemaining = Number(remaining) - log.drugId.amount;
-    console.log(newRemaining);
+    console.log("update remining is called", newRemaining);
     axios
       .patch(`https://server.pillbook-hy.com/drugs/${log.drugId._id}`, {
         remaining: newRemaining,
@@ -712,17 +712,21 @@ function TakeLog({
             <ul className="flex flex-col mt-6 gap-y-2.5">
               <button
                 className="text-[16.88px] text-primary-700 font-semibold h-[52px] w-full border-2 border-gray-400 rounded-md	"
-                onClick={() =>
+                onClick={() => {
                   handleSubmitTakenTime(
                     new Date().getTime() - 7 * 60 * 60 * 1000
-                  )
-                }
+                  );
+                  UpdateRemining();
+                }}
               >
                 Now
               </button>
               <button
                 className="text-[16.88px] text-primary-700 font-semibold h-[52px] w-full border-2 border-gray-400 rounded-md	"
-                onClick={() => handleSubmitTakenTime(log.plannedDateTime)}
+                onClick={() => {
+                  handleSubmitTakenTime(log.plannedDateTime);
+                  UpdateRemining();
+                }}
               >
                 On time
               </button>
